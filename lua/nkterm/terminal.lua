@@ -1,52 +1,107 @@
 local terminal = {}
 
-function layout(win_id, win_h)
-    vim.cmd('wincmd J')
-    vim.cmd.resize(math.floor(win_h))
-    vim.api.nvim_win_set_option(win_id, 'number', false) -- hide line nums
-    vim.cmd('startinsert') -- insert mode
+terminal.term_buf_id = nil
+
+-- configure the current window for the terminal buffer
+function configure()
+    if terminal.term_buf_id ~= nil then
+        local win_id = vim.api.nvim_get_current_win()
+
+        vim.api.nvim_win_set_buf(win_id, terminal.term_buf_id)
+
+        -- move window to the bottom 
+        vim.cmd('wincmd J') 
+
+        -- calculate the desired height for the terminal window
+        local win_h = vim.api.nvim_win_get_height(win_id)
+        local term_win_h = math.max(win_h / 3, 8)
+        vim.cmd.resize(math.floor(term_win_h))
+
+        -- additional options
+        --vim.api.nvim_win_set_option(win_id, 'number', false) -- hide line nums
+        --vim.cmd('startinsert') -- insert mode
+    end
 end
 
--- run this when the terminal is entered through an autocmd
-function enter()
-    local term_win_id = vim.api.nvim_get_current_win()
+function get_term_win_id()
+    local wins = vim.api.nvim_list_wins()
+    local wins_count = table.getn(wins)
+
+    for w = 1, wins_count do
+        if vim.api.nvim_win_get_buf(wins[w]) == terminal.term_buf_id then 
+            --vim.api.nvim_win_close(wins[w], true)
+            return wins[w]
+        end
+    end
+
+    return nil
+end
+
+function terminal.fix_layout()
+    local win_id = vim.api.nvim_get_current_win()
+    local buf_id = vim.api.nvim_get_current_buf()
+
+    local bufs = vim.api.nvim_list_bufs()
+    local bufs_count = table.getn(bufs)
+
+    local wins = vim.api.nvim_list_wins()
+    local wins_count = table.getn(wins)
+
+    -- check if the terminal is open
+    local term_win_id = get_term_win_id()
+    if term_win_id ~= nil then
+
+        -- check if the only remaining buffer is the terminal
+        if bufs_count == 2 then
+            vim.api.nvim_win_close(get_term_win_id(), true)
+        elseif bufs_count > 2 then
+
+            vim.cmd.split()
+            local new_win_id = vim.api.nvim_get_current_win()      
+
+            for b = 1, table.getn(bufs) do
+                if bufs[b] ~= terminal.term_buf_id and bufs[b] ~= vim.api.nvim_win_get_buf(win_id) then
+                    vim.api.nvim_win_set_buf(new_win_id, bufs[b])
+                    
+                    break
+                end
+            end
+
+            -- close the original buf
+            vim.api.nvim_buf_delete(buf_id, { force = true })
+
+            -- open the terminal
+            --vim.cmd.split()
+            --local new_term_win_id = vim.api.nvim_get_current_win()
+            --vim.api.nvim_win_set_buf(new_term_win_id, terminal.term_buf_id)
+            --configure()
+            vim.api.nvim_set_current_win(term_win_id)
+            configure()
+        end
+    end
 end
 
 function terminal.toggle()
 
-    -- calculate the desired height for the terminal window
-    local win_id = vim.api.nvim_get_current_win()
-    local win_h = vim.api.nvim_win_get_height(win_id)
-    local term_win_h = math.max(win_h / 3, 8)
-
     -- check if terminal is already open (in a hidden buffer)
-    if term_buf_id == nil or vim.api.nvim_buf_is_valid(term_buf_id) then
+    if terminal.term_buf_id == nil or not vim.api.nvim_buf_is_valid(terminal.term_buf_id) then
         vim.cmd.split('term://$SHELL')
+        terminal.term_buf_id = vim.api.nvim_get_current_buf()
 
-        -- store id for later
-        term_buf_id = vim.api.nvim_get_current_buf()
-        term_win_id = vim.api.nvim_get_current_win()
-
-        layout(term_win_id, term_win_h)
-
-    -- check if the buffer is hidden
-    elseif not vim.api.nvim_win_is_valid(term_win_id) then
-        -- create a new window to place our existing terminal buffer into
-        vim.cmd.split()
-
-        -- move terminal buffer to the new window
-        term_win_id = vim.api.nvim_get_current_win()
-        vim.api.nvim_win_set_buf(term_win_id, term_buf_id)
-
-        term_layout(term_win_id, term_win_h)
-
-    -- terminal is still open
-    elseif vim.api.nvim_win_get_buf(term_win_id) == term_buf_id then
-        vim.api.nvim_win_close(term_win_id, true)
-    
-    -- terminal has been lost, must create a new one
+        configure()
     else
-        print('lost term!')
+        local wins = vim.api.nvim_list_wins()
+        local wins_count = table.getn(wins)
+
+        -- check every open window to see if we can find the terminal buffer
+        local term_win_id = get_term_win_id()
+        if term_win_id ~= nil then
+            vim.api.nvim_win_close(term_win_id, true)
+        else
+            -- the terminal isn't open, create a window for it
+            vim.cmd.split()
+            configure()
+        end
     end
 end
 
