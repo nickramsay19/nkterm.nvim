@@ -8,6 +8,11 @@ A very uncomplicated terminal for nvim.
 :NkTermToggle
 ```
 
+To bind a key to `:NkTermToggle` in both normal and terminal mode, use the following:
+```lua
+vim.keymap.set({'n', 't'}, '<C-,>', [[<C-\><C-n>:NkTermToggle<CR>]], { noremap = true })
+```
+
 ## Installation
 
 ### Packer
