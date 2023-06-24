@@ -1,6 +1,7 @@
 local terminal = {}
 
 terminal.term_buf_id = nil
+terminal.term_win_h = nil
 
 -- configure the current window for the terminal buffer
 function configure()
@@ -13,9 +14,18 @@ function configure()
         vim.cmd('wincmd J') 
 
         -- calculate the desired height for the terminal window
-        local win_h = vim.api.nvim_win_get_height(win_id)
-        local term_win_h = math.max(win_h / 3, 8)
-        vim.cmd.resize(math.floor(term_win_h))
+        terminal.term_win_h = 10 --math.floor(math.max(win_h / 3, 8))
+        vim.cmd.resize(terminal.term_win_h)
+
+        -- autocmd to keep the same height after resize
+        vim.api.nvim_create_autocmd({'WinResized'}, {
+            callback = function(ev)
+                local curr_win = vim.api.nvim_get_current_win()
+                vim.api.nvim_set_current_win(win_id) 
+                vim.cmd.resize(terminal.term_win_h)
+                vim.api.nvim_set_current_win(curr_win) 
+            end
+        })
 
         -- additional options
         --vim.api.nvim_win_set_option(win_id, 'number', false) -- hide line nums
