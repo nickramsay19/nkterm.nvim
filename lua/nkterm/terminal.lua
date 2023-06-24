@@ -20,10 +20,12 @@ function configure()
         -- autocmd to keep the same height after resize
         vim.api.nvim_create_autocmd({'WinResized'}, {
             callback = function(ev)
-                local curr_win = vim.api.nvim_get_current_win()
-                vim.api.nvim_set_current_win(win_id) 
-                vim.cmd.resize(terminal.term_win_h)
-                vim.api.nvim_set_current_win(curr_win) 
+                if vim.api.nvim_win_is_valid(win_id) then
+                    local curr_win = vim.api.nvim_get_current_win()
+                    vim.api.nvim_set_current_win(win_id) 
+                    vim.cmd.resize(terminal.term_win_h)
+                    vim.api.nvim_set_current_win(curr_win) 
+                end
             end
         })
 
