@@ -29,9 +29,7 @@ function configure()
             end
         })
 
-        -- additional options
-        --vim.api.nvim_win_set_option(win_id, 'number', false) -- hide line nums
-        --vim.cmd('startinsert') -- insert mode
+        vim.api.nvim_win_set_option(win_id, 'number', false) -- hide line nums
     end
 end
 
